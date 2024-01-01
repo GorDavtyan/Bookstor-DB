@@ -1,22 +1,16 @@
--- Create a new database named BookstoreDB
-CREATE DATABASE BookstorDB;
+create database BookstoreDB;
 
--- Switch to the newly created database
-USE BookstorDB;
+use BookstoreDB;
 
-
-
--- Create a table named Books to store information about books
-CREATE TABLE Books (
-  BookID INT PRIMARY KEY NOT NULL AUTO_INCREMENT, 
-  Title VARCHAR(255),
-  Author VARCHAR(255),    
-  Genre VARCHAR(50),
-  Price DECIMAL(10, 2) NOT NULL,
-  QuantityInStock INT
+CREATE TABLE Books
+(
+    BookID          INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    Title           VARCHAR(255),
+    Author          VARCHAR(255),
+    Genre           VARCHAR(50),
+    Price           DECIMAL(10, 2)  NOT NULL,
+    QuantityInStock INT
 );
-
-
 
 -- Insert some sample data into the Books table
 INSERT INTO Books(Title, Author, Genre, Price, QuantityInStock) VALUES ('Book1', 'Author1', 'Genre1', 100.5, 50);
@@ -33,10 +27,10 @@ INSERT INTO Books(Title, Author, Genre, Price, QuantityInStock) VALUES ('Book10'
 
 -- Create a table named Customers to store information about customers
 CREATE TABLE Customers (
-    CustomerID INT PRIMARY KEY KEY NOT NULL AUTO_INCREMENT, 
-    Name VARCHAR(100) NOT NULL,
-    Email VARCHAR(255) NOT NULL,
-    Phone VARCHAR(15)
+                           CustomerID INT PRIMARY KEY KEY NOT NULL AUTO_INCREMENT,
+                           Name VARCHAR(100) NOT NULL,
+                           Email VARCHAR(255) NOT NULL,
+                           Phone VARCHAR(15)
 );
 
 
@@ -50,73 +44,69 @@ INSERT INTO Customers(Name, Email, Phone) VALUES ('Customers5', 'email5@gmail.co
 
 -- Create a table named Sales to track book sales
 CREATE TABLE Sales (
-    SaleID INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    BookID INT,
-    CustomerID INT,
-    DateOfSale DATE,
-    QuantitySold INT,
-    TotalPrice DECIMAL(10, 2),
-    FOREIGN KEY (BookID) REFERENCES Books(BookID),
-    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+                       SaleID INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+                       BookID INT,
+                       CustomerID INT,
+                       DateOfSale DATE,
+                       QuantitySold INT,
+                       TotalPrice DECIMAL(10, 2),
+                       FOREIGN KEY (BookID) REFERENCES Books(BookID),
+                       FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
 );
 
 
+# Change the delimiter to handle the trigger syntax
 -- Change the delimiter to handle the trigger syntax
--- DELIMITER //
+DELIMITER //
 
--- -- Create a trigger named UpdateQuantityInStock to handle book sales
--- CREATE TRIGGER UpdateQuantityInStock
--- BEFORE INSERT ON Sales
--- FOR EACH ROW
--- BEGIN
---     -- Declare variables to store the book's current quantity in stock
---     DECLARE currentQuantity INT;
+-- Create a trigger named UpdateQuantityInStock to handle book sales
+CREATE TRIGGER UpdateQuantityInStock
+    BEFORE INSERT ON Sales
+    FOR EACH ROW
+BEGIN
+    -- Declare variables to store the book's current quantity in stock
+    DECLARE currentQuantity INT;
 
---     -- Retrieve the current quantity in stock for the book being sold
---     SELECT QuantityInStock INTO currentQuantity
---     FROM Books
---     WHERE BookID = NEW.BookID;
-    
---     IF NEW.QuantityInStock <= currentQuantity THEN 
---       -- Calculate the total price for the sale
---       SET NEW.TotalPrice = NEW.QuantitySold * (SELECT Price FROM Books WHERE BookID = NEW.BookID);
-    
+    -- Retrieve the current quantity in stock for the book being sold
+    SELECT QuantityInStock INTO currentQuantity
+    FROM Books
+    WHERE BookID = NEW.BookID;
 
---     -- Update the QuantityInStock in the Books table
---     UPDATE Books SET QuantityInStock = QuantityInStock - NEW.QuantitySold  WHERE BookID = NEW.BookID;
-    
---     ELSE
---         #Raise an error if the quantity sold exceeds the available quantity
---         SIGNAL SQLSTATE '45000'
---         SET MESSAGE_TEXT = 'Quantity in stock is insufficient for the sale';
---     END If;    
--- END;
--- //
+    IF NEW.QuantitySold <= currentQuantity THEN
+        -- Calculate the total price for the sale
+        SET NEW.TotalPrice = NEW.QuantitySold * (SELECT Price FROM Books WHERE BookID = NEW.BookID);
 
--- -- Reset the delimiter back to semicolon
--- DELIMITER ;
+        -- Update the QuantityInStock in the Books table
+    UPDATE Books SET QuantityInStock = currentQuantity - NEW.QuantitySold WHERE BookID = NEW.BookID;
+
+    ELSE
+        -- Raise an error if the quantity sold exceeds the available quantity
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Quantity in stock is insufficient for the sale';
+END IF;
+END;
+//
+
+-- Reset the delimiter back to semicolon
+DELIMITER ;
 
 -- Insert some sample data into the Sales table
-INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (1, 1, '2023-01-01', 45.5);
-INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (5, 2, '2023-02-02', 15.5);
-INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (2, 3, '2023-03-03', 35.5);
-INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (4, 5, '2023-04-04', 65.5);
-INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (3, 4, '2023-05-05', 10.5);
+INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (1, 1, '2023-01-01', 2);
+INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (5, 2, '2023-02-02', 3);
+INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (2, 3, '2023-03-03', 1);
+INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (4, 5, '2023-04-04', 4);
+INSERT INTO Sales(BookID, CustomerID, DateOfSale, QuantitySold) VALUES (3, 4, '2023-05-05', 5);
 
 -- Query to retrieve information about book sales, including book title, customer name, and date of sale
 SELECT Books.Title, Customers.Name AS CustomerName, Sales.DateOfSale
 FROM Sales
-JOIN Books ON Sales.BookID = Books.BookID
-JOIN Customers ON Sales.CustomerID = Customers.CustomerID;
+         JOIN Books ON Sales.BookID = Books.BookID
+         JOIN Customers ON Sales.CustomerID = Customers.CustomerID;
 
 -- Query to calculate total revenue per book genre using book prices (not total prices from sales)
 SELECT Books.Genre, SUM(IFNULL(Sales.TotalPrice, 0)) AS TotalRevenue
 FROM Sales
-JOIN Books ON Sales.BookID = Books.BookID
+         JOIN Books ON Sales.BookID = Books.BookID
 GROUP BY Books.Genre;
 
--- Query to calculate total revenue per book genre using book prices (not total prices from sales)
-SELECT Books.Genre, SUM(IFNULL(Books.Price, 0)) AS TotalRevenue
-FROM Sales
-JOIN Books ON Sales.BookID = Books.BookID
-GROUP BY Books.Genre;
+

@@ -27,7 +27,7 @@ INSERT INTO Books(Title, Author, Genre, Price, QuantityInStock) VALUES ('Book10'
 
 -- Create a table named Customers to store information about customers
 CREATE TABLE Customers (
-                           CustomerID INT PRIMARY KEY KEY NOT NULL AUTO_INCREMENT,
+                           CustomerID INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
                            Name VARCHAR(100) NOT NULL,
                            Email VARCHAR(255) NOT NULL,
                            Phone VARCHAR(15)
